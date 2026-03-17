@@ -44,11 +44,12 @@ export default function ProductCard({ product }: ProductCardProps) {
           <span className="text-sm text-gray-500">庫存：{product.stock}</span>
         </div>
 
-        <Link
-          href={`/product/${product.id}`}
-          className="block rounded-xl bg-black px-4 py-3 text-center text-white"
-        >
-          點擊查看商品詳情
+        <Link href={`/product/${product.id}`} className="block">
+          <div className="flex min-h-[52px] items-center justify-center rounded-xl bg-black px-4 py-3 text-center text-white">
+            <span className="text-sm font-medium tracking-wide text-white">
+              查看商品詳情
+            </span>
+          </div>
         </Link>
       </div>
     </div>
