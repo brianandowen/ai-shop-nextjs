@@ -2,7 +2,9 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { formatPrice } from "@/lib/utils";
 
 interface ChatRoom {
   id: string;
@@ -17,6 +19,16 @@ interface ChatMessage {
   created_at: string;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  image_url: string | null;
+  category: string | null;
+}
+
 interface ChatWidgetClientProps {
   initialRoom: ChatRoom | null;
   initialMessages: ChatMessage[];
@@ -29,6 +41,7 @@ export default function ChatWidgetClient({
   const [open, setOpen] = useState(false);
   const [room] = useState<ChatRoom | null>(initialRoom);
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [products, setProducts] = useState<Product[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -49,6 +62,21 @@ export default function ChatWidgetClient({
       }
     } catch (error) {
       console.error("刷新訊息失敗:", error);
+    }
+  }
+
+  async function loadProducts() {
+    try {
+      const res = await fetch("/api/products", {
+        cache: "no-store",
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setProducts(data.products || []);
+      }
+    } catch (error) {
+      console.error("載入商品失敗:", error);
     }
   }
 
@@ -86,15 +114,28 @@ export default function ChatWidgetClient({
     }
   }
 
+  function getSuggestedProducts(message: string) {
+    if (!message || products.length === 0) return [];
+
+    const matched = products.filter((product) =>
+      message.toLowerCase().includes(product.name.toLowerCase())
+    );
+
+    return matched.slice(0, 2);
+  }
+
   useEffect(() => {
     if (open) {
       refreshMessages();
+      loadProducts();
     }
   }, [open]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, open]);
+
+  const renderedMessages = useMemo(() => messages, [messages]);
 
   return (
     <>
@@ -106,7 +147,7 @@ export default function ChatWidgetClient({
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 flex h-[520px] w-[360px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
+        <div className="fixed bottom-24 right-6 z-50 flex h-[560px] w-[380px] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl">
           <div className="border-b bg-black px-4 py-3 text-white">
             <div className="font-bold">AI 商店客服</div>
             <div className="text-xs text-gray-300">
@@ -115,37 +156,78 @@ export default function ChatWidgetClient({
           </div>
 
           <div className="flex-1 space-y-3 overflow-y-auto bg-gray-50 p-4">
-            {messages.length === 0 ? (
+            {renderedMessages.length === 0 ? (
               <div className="text-sm text-gray-500">
                 目前還沒有訊息，可以先問我：
                 「預算 2000 有推薦嗎？」
               </div>
             ) : (
-              messages.map((msg) => {
+              renderedMessages.map((msg) => {
                 const isUser = msg.sender_type === "user";
                 const isAI = msg.sender_type === "ai";
+                const suggestedProducts = isAI
+                  ? getSuggestedProducts(msg.message)
+                  : [];
 
                 return (
-                  <div
-                    key={msg.id}
-                    className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                  >
+                  <div key={msg.id} className="space-y-2">
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 ${
-                        isUser
-                          ? "bg-black text-white"
-                          : isAI
-                          ? "bg-blue-100 text-blue-900"
-                          : "bg-white text-black border"
+                      className={`flex ${
+                        isUser ? "justify-end" : "justify-start"
                       }`}
                     >
-                      {!isUser && (
-                        <div className="mb-1 text-xs font-semibold opacity-70">
-                          {isAI ? "AI 客服" : "商家"}
-                        </div>
-                      )}
-                      <div>{msg.message}</div>
+                      <div
+                        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-6 ${
+                          isUser
+                            ? "bg-black text-white"
+                            : isAI
+                            ? "bg-blue-100 text-blue-900"
+                            : "border bg-white text-black"
+                        }`}
+                      >
+                        {!isUser && (
+                          <div className="mb-1 text-xs font-semibold opacity-70">
+                            {isAI ? "AI 客服" : "商家"}
+                          </div>
+                        )}
+                        <div>{msg.message}</div>
+                      </div>
                     </div>
+
+                    {isAI && suggestedProducts.length > 0 && (
+                      <div className="space-y-2 pl-2">
+                        {suggestedProducts.map((product) => (
+                          <Link
+                            key={product.id}
+                            href={`/product/${product.id}`}
+                            className="block rounded-2xl border border-blue-200 bg-white p-3 transition hover:bg-blue-50"
+                          >
+                            <div className="flex gap-3">
+                              <img
+                                src={
+                                  product.image_url ||
+                                  "https://picsum.photos/seed/default/200/200"
+                                }
+                                alt={product.name}
+                                className="h-16 w-16 rounded-xl object-cover"
+                              />
+
+                              <div className="min-w-0 flex-1">
+                                <div className="line-clamp-1 font-semibold">
+                                  {product.name}
+                                </div>
+                                <div className="mt-1 text-xs text-gray-500">
+                                  {product.category || "未分類"}
+                                </div>
+                                <div className="mt-1 text-sm font-semibold">
+                                  {formatPrice(product.price)}
+                                </div>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })
