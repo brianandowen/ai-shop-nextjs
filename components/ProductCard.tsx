@@ -48,7 +48,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           href={`/product/${product.id}`}
           className="block rounded-xl bg-black px-4 py-3 text-center text-white"
         >
-          查看商品
+          點擊查看商品詳情
         </Link>
       </div>
     </div>

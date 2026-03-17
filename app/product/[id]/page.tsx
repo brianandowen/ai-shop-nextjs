@@ -12,6 +12,7 @@ interface Product {
   stock: number;
   image_url: string | null;
   category: string | null;
+  is_active: boolean;
 }
 
 interface ProductDetailPageProps {
@@ -30,7 +31,8 @@ async function getProduct(id: string): Promise<Product | null> {
         price,
         stock,
         image_url,
-        category
+        category,
+        is_active
       FROM products
       WHERE id = ${id}
       LIMIT 1
@@ -53,9 +55,11 @@ export default async function ProductDetailPage({
   const { id } = await params;
   const product = await getProduct(id);
 
-  if (!product) {
+  if (!product || !product.is_active) {
     return (
-      <div className="rounded-2xl bg-white p-6 shadow-sm">找不到商品</div>
+      <div className="rounded-2xl bg-white p-6 shadow-sm">
+        找不到商品
+      </div>
     );
   }
 
@@ -78,7 +82,9 @@ export default async function ProductDetailPage({
 
         <p className="leading-7 text-gray-700">{product.description}</p>
 
-        <div className="text-2xl font-semibold">{formatPrice(product.price)}</div>
+        <div className="text-2xl font-semibold">
+          {formatPrice(product.price)}
+        </div>
 
         <div className="text-gray-500">庫存：{product.stock}</div>
 

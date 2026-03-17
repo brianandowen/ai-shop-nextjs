@@ -1,6 +1,7 @@
 // app/page.tsx
 
 import ProductCard from "@/components/ProductCard";
+import { sql } from "@/lib/db";
 
 interface Product {
   id: string;
@@ -10,26 +11,31 @@ interface Product {
   stock: number;
   image_url: string | null;
   category: string | null;
+  is_active: boolean;
 }
 
 async function getProducts(): Promise<Product[]> {
   try {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const products = await sql`
+      SELECT
+        id,
+        name,
+        description,
+        price,
+        stock,
+        image_url,
+        category,
+        is_active,
+        created_at,
+        updated_at
+      FROM products
+      WHERE is_active = true
+      ORDER BY created_at DESC
+    `;
 
-    const res = await fetch(`${baseUrl}/api/products`, {
-      cache: "no-store",
-    });
-
-    const data = await res.json();
-
-    if (!data.success) {
-      return [];
-    }
-
-    return data.products || [];
+    return products as Product[];
   } catch (error) {
-    console.error("讀取商品失敗:", error);
+    console.error("首頁讀取商品失敗:", error);
     return [];
   }
 }
@@ -42,7 +48,7 @@ export default async function HomePage() {
       <section className="rounded-3xl bg-white p-8 shadow-sm">
         <h1 className="text-3xl font-bold">AI 單商家電商系統</h1>
         <p className="mt-3 text-gray-600">
-          目前提供商品瀏覽功能，下一步會接上登入、購物車、聊天與 AI 推薦。
+          提供商品瀏覽、購物車、訂單、聊天與 AI 推薦功能。
         </p>
       </section>
 
