@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import MerchantProductForm from "@/components/MerchantProductForm";
 import { formatPrice } from "@/lib/utils";
 
@@ -27,6 +27,8 @@ export default function MerchantProductsClient({
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const formRef = useRef<HTMLDivElement | null>(null);
 
   async function refreshProducts() {
     try {
@@ -113,6 +115,18 @@ export default function MerchantProductsClient({
     }
   }
 
+  function handleEdit(product: Product) {
+    setEditingProduct(product);
+
+    // 自動捲動到表單區
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 50);
+  }
+
   const activeCount = useMemo(
     () => products.filter((p) => p.is_active).length,
     [products]
@@ -149,17 +163,33 @@ export default function MerchantProductsClient({
         </div>
       </section>
 
-      <MerchantProductForm
-        mode={editingProduct ? "edit" : "create"}
-        initialData={editingProduct}
-        onSuccess={async () => {
-          await refreshProducts();
-          setEditingProduct(null);
-        }}
-        onCancelEdit={() => {
-          setEditingProduct(null);
-        }}
-      />
+      <div ref={formRef}>
+        <MerchantProductForm
+          mode={editingProduct ? "edit" : "create"}
+          initialData={editingProduct}
+          onSuccess={async () => {
+            await refreshProducts();
+            setEditingProduct(null);
+
+            setTimeout(() => {
+              formRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }, 50);
+          }}
+          onCancelEdit={() => {
+            setEditingProduct(null);
+
+            setTimeout(() => {
+              formRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              });
+            }, 50);
+          }}
+        />
+      </div>
 
       <section className="rounded-3xl bg-white p-8 shadow-sm">
         <h2 className="mb-6 text-2xl font-bold">商品列表</h2>
@@ -217,9 +247,9 @@ export default function MerchantProductsClient({
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 md:w-[140px]">
+                <div className="flex flex-col gap-2 md:w-[150px]">
                   <button
-                    onClick={() => setEditingProduct(product)}
+                    onClick={() => handleEdit(product)}
                     className="rounded-xl border border-gray-300 px-4 py-2"
                   >
                     編輯
@@ -234,7 +264,7 @@ export default function MerchantProductsClient({
                       ? "處理中..."
                       : product.is_active
                       ? "下架"
-                      : "上架"}
+                      : "重新上架"}
                   </button>
 
                   <button
